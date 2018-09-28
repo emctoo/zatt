@@ -11,8 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 class PersistentDict(collections.UserDict):
-    """Dictionary data structure that is automatically persisted to disk
-    as json."""
+
+    """Dictionary data structure that is automatically persisted to disk as json."""
+
     def __init__(self, path=None, data={}):
         if os.path.isfile(path):
             with open(path, 'r') as f:
@@ -37,17 +38,16 @@ class PersistentDict(collections.UserDict):
 
 
 class TallyCounter:
+
     def __init__(self, categories=[]):
-        self.data = {c: {'current': 0, 'past': collections.deque(maxlen=10)}
-                     for c in categories}
+        self.data = {c: {'current': 0, 'past': collections.deque(maxlen=10)} for c in categories}
         loop = asyncio.get_event_loop()
         loop.call_later(1, self._tick)
 
     def _tick(self):
         for name, category in self.data.items():
             if category['current']:
-                logger.debug('Completed %s %s (%s ms/op)', category['current'],
-                             name, 1/category['current'] * 1000)
+                logger.debug('Completed %s %s (%s ms/op)', category['current'], name, 1 / category['current'] * 1000)
 
             category['past'].append({time.time(): category['current']})
             category['current'] = 0

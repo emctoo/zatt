@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class Log(collections.UserList):
+
     def __init__(self, erase_log=False):
         super().__init__()
         self.path = os.path.join(config.storage, 'log')
@@ -37,12 +38,14 @@ class Log(collections.UserList):
 
 
 class Compactor():
+
     def __init__(self, count=0, term=None, data={}):
         self.count = count
         self.term = term
         self.data = data
         self.path = os.path.join(config.storage, 'compact')
-        #  load
+
+        # load
         logger.debug('Initializing compactor')
         if count or term or data:
             self.persist()
@@ -63,6 +66,7 @@ class Compactor():
 
 
 class DictStateMachine(collections.UserDict):
+
     def __init__(self, data={}, lastApplied=0):
         super().__init__(data)
         self.lastApplied = lastApplied
@@ -79,15 +83,15 @@ class DictStateMachine(collections.UserDict):
 
 
 class LogManager:
+
     """Instantiate and manage the components of the "Log" subsystem.
     That is: the log, the compactor and the state machine."""
-    def __init__(self, compact_count=0, compact_term=None, compact_data={},
-                 machine=DictStateMachine):
+
+    def __init__(self, compact_count=0, compact_term=None, compact_data={}, machine=DictStateMachine):
         erase_log = compact_count or compact_term or compact_data
         self.log = Log(erase_log)
         self.compacted = Compactor(compact_count, compact_term, compact_data)
-        self.state_machine = machine(data=self.compacted.data,
-                                     lastApplied=self.compacted.index)
+        self.state_machine = machine(data=self.compacted.data, lastApplied=self.compacted.index)
         self.commitIndex = self.compacted.index + len(self.log)
         self.state_machine.apply(self, self.commitIndex)
 

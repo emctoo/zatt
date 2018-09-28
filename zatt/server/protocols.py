@@ -10,9 +10,11 @@ logger = logging.getLogger(__name__)
 
 
 class Orchestrator():
+
     """The orchestrator manages the current node state,
     switching between Follower, Candidate and Leader when necessary.
     Only one Orchestrator """
+
     def __init__(self):
         os.makedirs(config.storage, exist_ok=True)
         self.state = Follower(orchestrator=self)
@@ -29,13 +31,11 @@ class Orchestrator():
         self.state.data_received_client(transport, message)
 
     def send(self, transport, message):
-        transport.sendto(msgpack.packb(message, use_bin_type=True,
-                         default=extended_msgpack_serializer))
+        transport.sendto(msgpack.packb(message, use_bin_type=True, default=extended_msgpack_serializer))
 
     def send_peer(self, recipient, message):
         if recipient != self.state.volatile['address']:
-            self.peer_transport.sendto(
-                msgpack.packb(message, use_bin_type=True), tuple(recipient))
+            self.peer_transport.sendto(msgpack.packb(message, use_bin_type=True), tuple(recipient))
 
     def broadcast_peers(self, message):
         for recipient in self.state.volatile['cluster']:
@@ -43,7 +43,9 @@ class Orchestrator():
 
 
 class PeerProtocol(asyncio.Protocol):
+
     """UDP protocol for communicating with peers."""
+
     def __init__(self, orchestrator, first_message=None):
 
         self.orchestrator = orchestrator
@@ -52,8 +54,7 @@ class PeerProtocol(asyncio.Protocol):
     def connection_made(self, transport):
         self.transport = transport
         if self.first_message:
-            transport.sendto(
-                msgpack.packb(self.first_message, use_bin_type=True))
+            transport.sendto(msgpack.packb(self.first_message, use_bin_type=True))
 
     def datagram_received(self, data, sender):
         message = msgpack.unpackb(data, encoding='utf-8')
@@ -64,13 +65,14 @@ class PeerProtocol(asyncio.Protocol):
 
 
 class ClientProtocol(asyncio.Protocol):
+
     """TCP protocol for communicating with clients."""
+
     def __init__(self, orchestrator):
         self.orchestrator = orchestrator
 
     def connection_made(self, transport):
-        logger.debug('Established connection with client %s:%s',
-                     *transport.get_extra_info('peername'))
+        logger.debug('Established connection with client %s:%s', *transport.get_extra_info('peername'))
         self.transport = transport
 
     def data_received(self, data):
@@ -78,10 +80,8 @@ class ClientProtocol(asyncio.Protocol):
         self.orchestrator.data_received_client(self, message)
 
     def connection_lost(self, exc):
-        logger.debug('Closed connection with client %s:%s',
-                     *self.transport.get_extra_info('peername'))
+        logger.debug('Closed connection with client %s:%s', *self.transport.get_extra_info('peername'))
 
     def send(self, message):
-        self.transport.write(msgpack.packb(
-            message, use_bin_type=True, default=extended_msgpack_serializer))
+        self.transport.write(msgpack.packb(message, use_bin_type=True, default=extended_msgpack_serializer))
         self.transport.close()

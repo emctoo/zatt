@@ -19,23 +19,34 @@ def start_logger():
         'version': 1,
         'disable_existing_loggers': False,
         'formatters': {
-            'prod': {'format': '{asctime}: {levelname}: {message}',
-                     'style': '{'},
-            'develop': {'format': '{message}',
-                        'style': '{'}
+            'prod': {
+                'format': '{asctime} - {levelname} - {filename}:{lineno} - {message}',
+                'style': '{'
+            },
+            'develop': {
+                'format': '{message}',
+                'style': '{'
+            }
         },
         'handlers': {
-            'console': {'class': 'logging.StreamHandler',
-                        'formatter': 'prod',
-                        'level': 'DEBUG'}
-            },
+            'console': {
+                'class': 'logging.StreamHandler',
+                'formatter': 'prod',
+                'level': 'DEBUG'
+            }
+        },
         'loggers': {
-            '': {'handlers': ['console'],
-                 'level': 'INFO',
-                 'propagate': True,
-                 'extra': {'server_id': 1}}
+            '': {
+                'handlers': ['console'],
+                'level': 'INFO',
+                'propagate': True,
+                'extra': {
+                    'server_id': 1
+                }
             }
         }
+    }
+
     if config.debug:
         logging_config['handlers']['console']['formatter'] = 'develop'
         logging_config['loggers']['']['level'] = 'DEBUG'
