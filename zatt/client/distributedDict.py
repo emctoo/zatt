@@ -1,12 +1,118 @@
 import collections
-from zatt.client.abstractClient import AbstractClient
-from zatt.client.refresh_policies import RefreshPolicyAlways
+
+import socket
+import random
+import msgpack
+
+from datetime import datetime, timedelta
+
+
+class AbstractClient:
+
+    """Abstract client. Contains primitives for implementing functioning
+    clients."""
+
+    def _request(self, message):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect(self.server_address)
+        sock.send(msgpack.packb(message, use_bin_type=True))
+
+        buff = bytes()
+        while True:
+            block = sock.recv(128)
+            if not block:
+                break
+            buff += block
+        resp = msgpack.unpackb(buff, encoding='utf-8')
+        sock.close()
+        if 'type' in resp and resp['type'] == 'redirect':
+            self.server_address = tuple(resp['leader'])
+            resp = self._request(message)
+        return resp
+
+    def _get_state(self):
+        """Retrive remote state machine."""
+        self.server_address = tuple(random.choice(self.data['cluster']))
+        return self._request({'type': 'get'})
+
+    def _append_log(self, payload):
+        """Append to remote log."""
+        return self._request({'type': 'append', 'data': payload})
+
+    @property
+    def diagnostic(self):
+        return self._request({'type': 'diagnostic'})
+
+    def config_cluster(self, action, address, port):
+        return self._request({'type': 'config', 'action': action, 'address': address, 'port': port})
+
+
+class RefreshPolicyAlways:
+
+    """Policy to establish when a DistributedDict should update its content.
+    This policy requires the client to update at every read.
+    This is the default policy.
+    """
+
+    def can_update(self):
+        return True
+
+
+class RefreshPolicyLock:
+
+    """Policy to establish when a DistributedDict should update its content.
+    This policy requires the client to update whenever the lock is set.
+    """
+
+    def __init__(self, status=True):
+        self.lock = status
+
+    def can_update(self):
+        return self.lock
+
+
+class RefreshPolicyCount:
+
+    """Policy to establish when a DistributedDict should update its content.
+    This policy requires the client to update every `maximum` iterations.
+    """
+
+    def __init__(self, maximum=10):
+        self.counter = 0
+        self.maximum = maximum
+
+    def can_update(self):
+        self.counter += 1
+        if self.counter == self.maximum:
+            self.counter = 0
+            return True
+        else:
+            return False
+
+
+class RefreshPolicyTime:
+
+    """Policy to establish when a DistributedDict should update its content.
+    This policy requires the client to update every `delta` time interval.
+    """
+
+    def __init__(self, delta=timedelta(minutes=1)):
+        self.delta = delta()
+        self.last_refresh = None
+
+    def can_update(self):
+        if self.last_refresh is None or datetime.now() - self.last_refresh > self.delta:
+            self.last_refresh = datetime.now()
+            return True
+        else:
+            return False
 
 
 class DistributedDict(collections.UserDict, AbstractClient):
+
     """Client for zatt instances with dictionary based state machines."""
-    def __init__(self, addr, port, append_retry_attempts=3,
-                 refresh_policy=RefreshPolicyAlways()):
+
+    def __init__(self, addr, port, append_retry_attempts=3, refresh_policy=RefreshPolicyAlways()):
         super().__init__()
         self.data['cluster'] = [(addr, port)]
         self.append_retry_attempts = append_retry_attempts
@@ -44,8 +150,10 @@ class DistributedDict(collections.UserDict, AbstractClient):
         # TODO: logging
         return response
 
+
 if __name__ == '__main__':
     import sys
+
     if len(sys.argv) == 3:
-        d = DistributedDict('127.0.0.1', 9111)
+        d = DistributedDict('localhost', 5255)
         d[sys.argv[1]] = sys.argv[2]
