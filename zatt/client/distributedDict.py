@@ -1,16 +1,16 @@
-import collections
+#!/usr/bin/env python
+# coding=utf-8
 
+import collections
 import socket
 import random
+import datetime
 import msgpack
-
-from datetime import datetime, timedelta
 
 
 class AbstractClient:
 
-    """Abstract client. Contains primitives for implementing functioning
-    clients."""
+    """Abstract client. Contains primitives for implementing functioning clients."""
 
     def _request(self, message):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -96,13 +96,13 @@ class RefreshPolicyTime:
     This policy requires the client to update every `delta` time interval.
     """
 
-    def __init__(self, delta=timedelta(minutes=1)):
+    def __init__(self, delta=datetime.timedelta(minutes=1)):
         self.delta = delta()
         self.last_refresh = None
 
     def can_update(self):
-        if self.last_refresh is None or datetime.now() - self.last_refresh > self.delta:
-            self.last_refresh = datetime.now()
+        if self.last_refresh is None or datetime.datetime.now() - self.last_refresh > self.delta:
+            self.last_refresh = datetime.datetime.now()
             return True
         else:
             return False
