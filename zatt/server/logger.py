@@ -20,11 +20,11 @@ def start_logger():
         'disable_existing_loggers': False,
         'formatters': {
             'prod': {
-                'format': '{asctime} - {levelname} - {filename}:{lineno} - {message}',
+                'format': '{asctime} - {message}',
                 'style': '{'
             },
             'develop': {
-                'format': '{message}',
+                'format': '{asctime} - {levelname} - {filename}:{lineno} - {message}',
                 'style': '{'
             }
         },
